@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Para Cristina</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;1,9..144,400&family=Work+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
+<style>
+  :root{
+    --sky-dusk-top:#241b3a;
+    --sky-dusk-bottom:#4a3a63;
+    --sky-day-top:#e8a94f;
+    --sky-day-bottom:#f3c878;
+    --soil:#3a2a1e;
+    --soil-light:#5a4030;
+    --stem:#4f7a3e;
+    --stem-light:#6b9a52;
+    --leaf:#5c8a46;
+    --petal:#f6c445;
+    --petal-shade:#e0a52e;
+    --flower-center:#c9781f;
+    --cream:#f7efd9;
+    --gold:#caa15a;
+    --ink:#1c140d;
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    height:100%;
+    margin:0;
+    background:var(--sky-dusk-top);
+    overflow:hidden;
+    font-family:'Work Sans', sans-serif;
+  }
+  #stage{
+    position:fixed;
+    inset:0;
+    width:100%;
+    height:100%;
+    background:linear-gradient(to bottom, var(--sky-dusk-top), var(--sky-dusk-bottom));
+    transition:background 3.5s ease;
+    padding-top:env(safe-area-inset-top,0px);
+    padding-bottom:env(safe-area-inset-bottom,0px);
+  }
+  #stage.bloomed{
+    background:linear-gradient(to bottom, var(--sky-day-top), var(--sky-day-bottom));
+  }
+  .stars{
+    position:absolute;
+    inset:0;
+    opacity:1;
+    transition:opacity 3s ease;
+    pointer-events:none;
+  }
+  #stage.bloomed .stars{ opacity:0; }
+  .star{
+    position:absolute;
+    width:2px;
+    height:2px;
+    background:var(--cream);
+    border-radius:50%;
+    animation:twinkle 3s ease-in-out infinite;
+  }
+  @keyframes twinkle{
+    0%,100%{opacity:.15;}
+    50%{opacity:.9;}
+  }
+
+  svg#scene{
+    position:absolute;
+    left:50%;
+    bottom:0;
+    transform:translateX(-50%);
+    width:min(720px, 100%);
+    height:auto;
+    display:block;
+  }
+
+  .hint{
+    position:absolute;
+    top:12%;
+    left:50%;
+    transform:translateX(-50%);
+    color:var(--cream);
+    text-align:center;
+    font-weight:300;
+    font-size:clamp(0.95rem, 2.4vw, 1.15rem);
+    letter-spacing:.02em;
+    opacity:.85;
+    transition:opacity .8s ease;
+    max-width:80vw;
+  }
+  .hint em{ font-style:italic; color:var(--gold); }
+  .hint .cue{
+    display:block;
+    font-size:.72em;
+    font-weight:300;
+    font-style:normal;
+    opacity:.6;
+    margin-top:.55em;
+    letter-spacing:.03em;
+  }
+  #stage.bloomed .hint{ opacity:0; }
+
+  svg#scene.invite{ animation:invite-pulse 2.4s ease-in-out infinite; cursor:pointer; }
+  @keyframes invite-pulse{
+    0%,100%{ filter:brightness(1); }
+    50%{ filter:brightness(1.1); }
+  }
+
+  #seed-group{
+    cursor:pointer;
+    transform-origin:400px 505px;
+    animation:breathe 2.6s ease-in-out infinite;
+  }
+  #stage.planted #seed-group{ animation:none; }
+  @keyframes breathe{
+    0%,100%{ transform:translateY(0px) scale(1); }
+    50%{ transform:translateY(-4px) scale(1.04); }
+  }
+
+  #stem-path{
+    stroke:var(--stem);
+    stroke-width:6;
+    fill:none;
+    stroke-linecap:round;
+  }
+
+  .leaf{
+    fill:var(--leaf);
+    transform-box:fill-box;
+    transform-origin:0% 100%;
+    transform:scale(0);
+  }
+
+  #flower{
+    transform-box:fill-box;
+    transform-origin:50% 50%;
+    transform:scale(0) rotate(-8deg);
+    transition:transform 1.4s cubic-bezier(.34,1.2,.4,1);
+  }
+  .petal{
+    fill:var(--petal);
+  }
+  .petal:nth-child(odd){ fill:var(--petal-shade); }
+
+  .message{
+    position:absolute;
+    left:50%;
+    top:8%;
+    transform:translate(-50%, -10px);
+    width:min(560px, 84vw);
+    text-align:center;
+    color:var(--ink);
+    background:rgba(255,255,255,0.0);
+    opacity:0;
+    pointer-events:none;
+    transition:opacity 1.8s ease, transform 1.8s ease;
+  }
+  .message.show{
+    opacity:1;
+    transform:translate(-50%, 0px);
+    pointer-events:auto;
+  }
+  .message h1{
+    font-family:'Fraunces', serif;
+    font-weight:500;
+    font-style:italic;
+    font-size:clamp(1.5rem, 4vw, 2.1rem);
+    margin:0 0 .6em;
+    color:#5c3a12;
+  }
+  .message p{
+    font-family:'Fraunces', serif;
+    font-size:clamp(1rem, 2.4vw, 1.15rem);
+    line-height:1.65;
+    color:#3a2a12;
+    margin:0 0 .9em;
+  }
+  .message .signoff{
+    font-style:italic;
+    color:#7a5a20;
+    margin-top:1em;
+  }
+
+  .controls{
+    position:absolute;
+    bottom:calc(18px + env(safe-area-inset-bottom,0px));
+    left:50%;
+    transform:translateX(-50%);
+    display:flex;
+    gap:14px;
+    opacity:0;
+    transition:opacity 1.2s ease 1.5s;
+  }
+  #stage.bloomed .controls{ opacity:1; }
+  .btn{
+    width:42px;
+    height:42px;
+    border-radius:50%;
+    border:1px solid rgba(60,40,10,0.25);
+    background:rgba(255,255,255,0.35);
+    backdrop-filter:blur(4px);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+    color:#4a2f0d;
+  }
+  .btn svg{ width:18px; height:18px; }
+  .btn:focus-visible{ outline:2px solid #4a2f0d; outline-offset:2px; }
+
+  @media (prefers-reduced-motion: reduce){
+    #seed-group{ animation:none; }
+    .message, #stage{ transition-duration:.3s; }
+  }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div class="stars" id="stars"></div>
+  <div class="hint" id="hint">Toca la semilla y <em>siémbrala</em></div>
+
+  <svg id="scene" viewBox="0 0 800 600" aria-hidden="true">
+    <!-- soil mound -->
+    <path d="M0,600 L0,540 Q400,470 800,540 L800,600 Z" fill="#2c2015"></path>
+    <path d="M0,600 L0,555 Q400,500 800,555 L800,600 Z" fill="var(--soil)"></path>
+    <ellipse cx="400" cy="530" rx="140" ry="16" fill="var(--soil-light)" opacity="0.5"></ellipse>
+
+    <!-- stem -->
+    <path id="stem-path" d="M400,520 Q392,420 400,260" pathLength="1"></path>
+
+    <!-- leaves -->
+    <path class="leaf" id="leaf-left" d="M400,440 C350,435 320,405 315,370 C365,375 400,400 400,440 Z"></path>
+    <path class="leaf" id="leaf-right" d="M400,380 C450,373 478,342 483,308 C433,315 400,340 400,380 Z"></path>
+
+    <!-- flower -->
+    <g id="flower"></g>
+
+    <!-- seed (shown before planting) -->
+    <g id="seed-group">
+      <ellipse cx="400" cy="505" rx="14" ry="19" fill="#6b4a26"></ellipse>
+      <ellipse cx="400" cy="500" rx="7" ry="10" fill="#8a6535" opacity="0.7"></ellipse>
+    </g>
+  </svg>
+
+  <div class="message" id="message">
+    <h1>¡¡Feliz día, Mi Amor!!</h1>
+    <p>Aunque ahora no puedo ponerte una en las manos, sí puedo darte una que crece cada vez que la abres, tal y como ha ido creciendo nuestro amor  desde que éramos niños.</p>
+    <p>Quiero que sepas que, aunque estemos lejos, tu recuerdo me acompaña cada día y gracias a ello siento tu cercanía. El día en que los kilómetros que no separan ya no estén, ese día voy a estar ahí, con flores de verdad.</p>
+    <p class="signoff">Te amo, mi amor.</p>
+  </div>
+
+  <div class="controls">
+    <button class="btn" id="sound-btn" aria-label="Silenciar música" title="Silenciar música">
+      <svg id="icon-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7"/><path d="M19 6a8 8 0 0 1 0 12" stroke-opacity="0.6"/></svg>
+      <svg id="icon-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" style="display:none"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16 9l5 6M21 9l-5 6"/></svg>
+    </button>
+    <button class="btn" id="restart-btn" aria-label="Sembrar otra vez" title="Sembrar otra vez">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 4v5h5"/><path d="M4.5 9a8 8 0 1 1 1.3 6.5"/></svg>
+    </button>
+  </div>
+</div>
+
+<script>
+(function(){
+  // scatter stars
+  var starsEl = document.getElementById('stars');
+  for(var i=0;i<60;i++){
+    var s = document.createElement('div');
+    s.className='star';
+    s.style.left = (Math.random()*100)+'%';
+    s.style.top = (Math.random()*70)+'%';
+    s.style.animationDelay = (Math.random()*3)+'s';
+    starsEl.appendChild(s);
+  }
+
+  // build flower petals
+  var flower = document.getElementById('flower');
+  var ns = 'http://www.w3.org/2000/svg';
+  var cx=400, cy=260, petalCount=8;
+  for(var p=0;p<petalCount;p++){
+    var angle = (360/petalCount)*p;
+    var g = document.createElementNS(ns,'g');
+    g.setAttribute('transform','rotate('+angle+' '+cx+' '+cy+')');
+    var petal = document.createElementNS(ns,'ellipse');
+    petal.setAttribute('class','petal');
+    petal.setAttribute('cx', cx);
+    petal.setAttribute('cy', cy-34);
+    petal.setAttribute('rx', 16);
+    petal.setAttribute('ry', 30);
+    g.appendChild(petal);
+    flower.appendChild(g);
+  }
+  var center = document.createElementNS(ns,'circle');
+  center.setAttribute('cx',cx);
+  center.setAttribute('cy',cy);
+  center.setAttribute('r',20);
+  center.setAttribute('fill','var(--flower-center)');
+  flower.appendChild(center);
+
+  var stageEl = document.getElementById('stage');
+  var scene = document.getElementById('scene');
+  var seed = document.getElementById('seed-group');
+  var hint = document.getElementById('hint');
+  var stemPath = document.getElementById('stem-path');
+  var leafLeft = document.getElementById('leaf-left');
+  var leafRight = document.getElementById('leaf-right');
+  stemPath.style.strokeDasharray = 1;
+  stemPath.style.strokeDashoffset = 1;
+
+  // one short line per tap; the 4th tap reveals the full letter instead
+  var stepMessages = [
+    'Como esta semilla, esto empezó pequeño, casi sin que nos diéramos cuenta.',
+    'Ha costado que crezca con tantos obstaculos en el camino, pero sigue ahí, firme.',
+    'Y cada vez que podemos vernos o incluso hablar, crece un poquito más y se hace más fuerte.',
+  ];
+
+  var step = 0; // 0..4
+  var busy = false;
+  var synth, loop, reverb;
+
+  function setupAudio(){
+    if(synth) return;
+    reverb = new Tone.Reverb({decay:4, wet:0.35}).toDestination();
+    synth = new Tone.PolySynth(Tone.Synth, {
+      oscillator:{type:'sine'},
+      envelope:{attack:0.8, decay:0.3, sustain:0.4, release:2.2}
+    }).connect(reverb);
+    synth.volume.value = -14;
+    var notes = ['F4','A4','C5','D5','C5','A4','G4','F4','A4','D5','F5','D5'];
+    var idx = 0;
+    loop = new Tone.Loop(function(time){
+      synth.triggerAttackRelease(notes[idx % notes.length], '2n', time);
+      idx++;
+    }, '1.5n');
+    Tone.Transport.bpm.value = 54;
+  }
+
+  function setHintText(html){
+    hint.style.transition = 'opacity .5s ease';
+    hint.style.opacity = 0;
+    setTimeout(function(){
+      hint.innerHTML = html;
+      hint.style.opacity = .9;
+    }, 520);
+  }
+
+  function showStepMessage(text, isLast){
+    setHintText(text + (isLast ? '' : '<span class="cue">toca para seguir</span>'));
+  }
+
+  function advance(){
+    if(busy || step >= 4) return;
+    step++;
+    busy = true;
+    scene.classList.remove('invite');
+
+    if(step === 1){
+      stageEl.classList.add('planted');
+      seed.style.transition = 'opacity .6s ease, transform .6s ease';
+      seed.style.opacity = '0';
+      seed.style.transform = 'translateY(10px) scale(0.6)';
+
+      setupAudio();
+      Tone.start().then(function(){
+        Tone.Transport.start();
+        loop.start(0);
+      });
+
+      setTimeout(function(){
+        stemPath.style.transition = 'stroke-dashoffset 2s ease-out';
+        stemPath.style.strokeDashoffset = 0.65;
+      }, 300);
+
+      setTimeout(function(){
+        showStepMessage(stepMessages[0], false);
+        busy = false;
+        scene.classList.add('invite');
+      }, 2600);
+    }
+
+    else if(step === 2){
+      hint.style.opacity = 0;
+      stemPath.style.transition = 'stroke-dashoffset 1.8s ease-out';
+      stemPath.style.strokeDashoffset = 0.3;
+
+      setTimeout(function(){
+        leafLeft.style.transition = 'transform 1s cubic-bezier(.34,1.56,.64,1)';
+        leafLeft.style.transform = 'scale(1)';
+      }, 700);
+
+      setTimeout(function(){
+        showStepMessage(stepMessages[1], false);
+        busy = false;
+        scene.classList.add('invite');
+      }, 2400);
+    }
+
+    else if(step === 3){
+      hint.style.opacity = 0;
+      stemPath.style.transition = 'stroke-dashoffset 1.6s ease-out';
+      stemPath.style.strokeDashoffset = 0;
+
+      setTimeout(function(){
+        leafRight.style.transition = 'transform 1s cubic-bezier(.34,1.56,.64,1)';
+        leafRight.style.transform = 'scale(1)';
+        flower.style.transform = 'scale(0.32) rotate(-6deg)';
+      }, 600);
+
+      setTimeout(function(){
+        showStepMessage(stepMessages[2], false);
+        busy = false;
+        scene.classList.add('invite');
+      }, 2300);
+    }
+
+    else if(step === 4){
+      hint.style.transition = 'opacity .6s ease';
+      hint.style.opacity = 0;
+
+      setTimeout(function(){
+        flower.style.transform = 'scale(1) rotate(0deg)';
+        stageEl.classList.add('bloomed');
+      }, 300);
+
+      setTimeout(function(){
+        document.getElementById('message').classList.add('show');
+        busy = false;
+      }, 2000);
+    }
+  }
+
+  function restart(){
+    step = 0;
+    busy = false;
+    stageEl.classList.remove('planted','bloomed');
+    document.getElementById('message').classList.remove('show');
+    seed.style.transition = 'none';
+    seed.style.opacity = '1';
+    seed.style.transform = 'none';
+    stemPath.style.transition = 'none';
+    stemPath.style.strokeDashoffset = 1;
+    leafLeft.style.transition = 'none';
+    leafLeft.style.transform = 'scale(0)';
+    leafRight.style.transition = 'none';
+    leafRight.style.transform = 'scale(0)';
+    flower.style.transition = 'none';
+    flower.style.transform = 'scale(0) rotate(-8deg)';
+    void flower.offsetWidth;
+    flower.style.transition = '';
+    hint.style.transition = 'none';
+    hint.innerHTML = 'Toca la semilla y <em>sémbrala</em>';
+    hint.style.opacity = .85;
+    scene.classList.add('invite');
+    if(loop){ loop.stop(0); }
+    if(typeof Tone!=='undefined'){ Tone.Transport.stop(); }
+  }
+
+  scene.classList.add('invite');
+  scene.addEventListener('click', advance);
+  scene.addEventListener('touchstart', function(e){ e.preventDefault(); advance(); }, {passive:false});
+
+  document.getElementById('restart-btn').addEventListener('click', restart);
+
+  var soundOn = true;
+  document.getElementById('sound-btn').addEventListener('click', function(){
+    soundOn = !soundOn;
+    document.getElementById('icon-on').style.display = soundOn ? 'block':'none';
+    document.getElementById('icon-off').style.display = soundOn ? 'none':'block';
+    if(synth){
+      Tone.Destination.mute = !soundOn;
+    }
+    this.title = soundOn ? 'Silenciar música' : 'Activar música';
+    this.setAttribute('aria-label', this.title);
+  });
+})();
+</script>
+</body>
+</html>
